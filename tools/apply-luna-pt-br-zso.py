@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the two LUNA-PT-BR build customizations to the pinned nhddl submodule.
+"""Apply LUNA-PT-BR build customizations to the pinned nhddl submodule.
 
 The parent repository tracks nhddl as a submodule, so these source changes are
 applied to its working tree immediately before a LUNA build. The transformation
@@ -32,6 +32,8 @@ def main() -> int:
     root = Path(sys.argv[1]).resolve()
     required = [
         root / "src/ui/language.c",
+        root / "src/options.c",
+        root / "include/options.h",
         root / "src/devices/iso.c",
         root / "src/devices/title_id.c",
         root / "src/neutrino.c",
@@ -55,7 +57,30 @@ def main() -> int:
         "  activeLanguage = LUNA_LANGUAGE_PORTUGUESE;",
     )
 
-    # 2) Include .ZSO images in discovery. Their uncompressed ISO sectors are
+    # 2) OPL is the default game core on a fresh setup. A saved /LUNA/gameCore.txt
+    # preference and an explicit global.yaml setting still take precedence.
+    options = root / "src/options.c"
+    replace_once(
+        options,
+        "  int opl = core != NULL && !core->isDisabled && core->value != NULL &&\n"
+        "            !strcmp(core->value, \"opl\");",
+        "  int opl = core == NULL || (!core->isDisabled && core->value != NULL &&\n"
+        "            !strcmp(core->value, \"opl\"));",
+    )
+    replace_once(
+        options,
+        "    globalOpl = core != NULL && !core->isDisabled && core->value != NULL &&\n"
+        "                !strcmp(core->value, \"opl\");",
+        "    globalOpl = core == NULL || (!core->isDisabled && core->value != NULL &&\n"
+        "                !strcmp(core->value, \"opl\"));",
+    )
+    replace_once(
+        root / "include/options.h",
+        "// Drive-wide game core preference. Neutrino is the default.",
+        "// Drive-wide game core preference. OPL is the fresh-setup default.",
+    )
+
+    # 3) Include .ZSO images in discovery. Their uncompressed ISO sectors are
     # read only for metadata; game execution is routed to the OPL core.
     replace_once(
         root / "src/devices/iso.c",
@@ -285,7 +310,7 @@ static int readImageAt(int fd, uint64_t offset, void *buffer, size_t size,
         "                  isZso, isZso ? &zso : NULL)) {\n",
     )
 
-    # Route compressed images to OPL, the supported ZSO execution core.
+    # 4) Route compressed images to OPL, the supported ZSO execution core.
     neutrino = root / "src/neutrino.c"
     replace_once(
         neutrino,
@@ -316,7 +341,7 @@ static int readImageAt(int fd, uint64_t offset, void *buffer, size_t size,
         "  // LUNA metadata is not a Neutrino command-line option. A missing or disabled\n",
     )
 
-    # Let the OPL core accept compressed-file length and avoid probing compressed
+    # 5) Let the OPL core accept compressed-file length and avoid probing compressed
     # bytes as if they were an ISO PVD/logo. Its bundled IOP reader handles ZSO.
     opl = root / "src/opl_ata.c"
     replace_once(
@@ -368,7 +393,7 @@ static int readImageAt(int fd, uint64_t offset, void *buffer, size_t size,
         "  if (!isZso && lseek(fd, 16 * 2048, SEEK_SET) >= 0 &&\n",
     )
 
-    print("Applied LUNA-PT-BR defaults and ZSO support to nhddl.")
+    print("Applied LUNA PT-BR, OPL-default, and ZSO customizations to nhddl.")
     return 0
 
 
