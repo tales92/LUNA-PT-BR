@@ -275,6 +275,16 @@ static int readImageAt(int fd, uint64_t offset, void *buffer, size_t size,
         "                                 isZso, isZso ? &zso : NULL);",
     )
 
+    # Read SYSTEM.CNF through the same sector-aware reader as the PVD and directory.
+    # Without this, ZSO scanning reaches the correct extent but reads compressed bytes.
+    replace_once(
+        title_id,
+        "  if (lseek64(fd, (int64_t)systemCNF.offset, SEEK_SET) < 0 ||\\n"
+        "      readExact(fd, text, systemCNF.size)) {\\n",
+        "  if (readImageAt(fd, systemCNF.offset, text, systemCNF.size,\\n"
+        "                  isZso, isZso ? &zso : NULL)) {\\n",
+    )
+
     # Route compressed images to OPL, the supported ZSO execution core.
     neutrino = root / "src/neutrino.c"
     replace_once(
