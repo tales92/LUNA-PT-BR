@@ -81,8 +81,8 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p dist
-          cp nhddl/build-ci/luna.elf dist/LUNA-Release-Candidate.elf
           build_id="$(date -u +%Y%m%d)-${GITHUB_SHA:0:7}"
+          cp nhddl/build-ci/luna.elf "dist/LUNA-local-test-${build_id}.elf"
           pwsh -NoLogo -NoProfile -File tools/package-fmcb.ps1 -LocalTest "$build_id"
           ls -lh dist/*.zip dist/SHA256SUMS.txt
 
