@@ -3,15 +3,15 @@
 # Run in a PS2SDK container with the complete LUNA checkout at /workspace.
 set -eu
 
-: "\${PS2SDK:?PS2SDK must point to the PS2SDK installation}"
-workspace="\${LUNA_WORKSPACE:-/workspace}"
-frontend="\${LUNA_FRONTEND:-$workspace/nhddl}"
+: "${PS2SDK:?PS2SDK must point to the PS2SDK installation}"
+workspace="${LUNA_WORKSPACE:-/workspace}"
+frontend="${LUNA_FRONTEND:-$workspace/nhddl}"
 core="$workspace/psxcore"
-build_dir="\${LUNA_BUILD_DIR:-$frontend/build-psxcore}"
-emulator_build="\${LUNA_EMULATOR_OPTION:-ON}"
-development="\${LUNA_PSXCORE_DEVELOPMENT:-OFF}"
-runtime_elf="\${LUNA_PSXCORE_RUNTIME_ELF:-}"
-igr_return_path="\${LUNA_PSXCORE_RETURN_PATH:-mc0:/APP_LUNA/luna.elf}"
+build_dir="${LUNA_BUILD_DIR:-$frontend/build-psxcore}"
+emulator_build="${LUNA_EMULATOR_OPTION:-ON}"
+development="${LUNA_PSXCORE_DEVELOPMENT:-OFF}"
+runtime_elf="${LUNA_PSXCORE_RUNTIME_ELF:-}"
+igr_return_path="${LUNA_PSXCORE_RETURN_PATH:-mc0:/APP_LUNA/luna.elf}"
 
 if [ ! -f "$core/Makefile" ]; then
   echo "Initialize the psxcore submodule before building." >&2
@@ -54,7 +54,7 @@ sh "$workspace/tools/bootstrap-ps2-libtiff.sh"
 # A supplied ELF allows direct and frontend tests to use exactly the same bytes.
 runtime_source=external-reference-unverified
 if [ -z "$runtime_elf" ]; then
-  if [ -z "\${NP_BDMA_MODULE_DIR:-}" ]; then
+  if [ -z "${NP_BDMA_MODULE_DIR:-}" ]; then
     NP_BDMA_MODULE_DIR="$build_dir/psxcore-drivers"
     sh "$workspace/tools/fetch-psxcore-drivers.sh" "$NP_BDMA_MODULE_DIR"
     export NP_BDMA_MODULE_DIR
@@ -105,7 +105,7 @@ compiler_version="$("$PS2DEV/ee/bin/mips64r5900el-ps2-elf-gcc" -dumpfullversion)
     printf 'emulator_build=%s\ndevelopment=%s\n' "$emulator_build" "$development"
     sdk_revision="$(git -c safe.directory="$PS2SDK" -C "$PS2SDK" rev-parse HEAD 2>/dev/null || printf unavailable)"
     printf 'ps2sdk_revision=%s\n' "$sdk_revision"
-    printf 'build_image=%s\nbuild_image_id=%s\n' "\${LUNA_BUILD_IMAGE:-unspecified}" "\${LUNA_BUILD_IMAGE_ID:-unspecified}"
+    printf 'build_image=%s\nbuild_image_id=%s\n' "${LUNA_BUILD_IMAGE:-unspecified}" "${LUNA_BUILD_IMAGE_ID:-unspecified}"
     printf 'ee_compiler_version=%s\n' "$compiler_version"
     printf 'built_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     printf 'verification=build-and-bootstrap-layout-gameplay-pending\n'
