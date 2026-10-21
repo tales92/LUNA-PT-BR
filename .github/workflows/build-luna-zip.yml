@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          git submodule update --init nhddl neutrino opl
+          git submodule update --init --recursive nhddl neutrino opl
 
       - name: Validate and apply the two requested customizations
         shell: bash
