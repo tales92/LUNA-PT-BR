@@ -1,4 +1,4 @@
-name: Build LUNA PT-BR + ZSO ZIP
+name: Build LUNA PT-BR + ZSO + OPL default ZIP
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           set -euxo pipefail
           git submodule update --init --recursive nhddl neutrino opl
 
-      - name: Validate and apply the two requested customizations
+      - name: Validate and apply PT-BR, OPL-default, and ZSO customizations
         shell: bash
         run: |
           set -euxo pipefail
@@ -102,7 +102,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## LUNA PT-BR + ZSO"
+            echo "## LUNA PT-BR + ZSO + OPL default"
             echo
             echo "- Source revision: \`$GITHUB_SHA\`"
             if [ "${{ job.status }}" = "success" ]; then
@@ -111,5 +111,5 @@ jobs:
             else
               echo "- Build: failed; inspect the preceding step logs."
             fi
-            echo "- The app changes are limited to the requested PT-BR default and ZSO support."
+            echo "- App customizations: PT-BR default, OPL as the fresh-install game core, and ZSO discovery/launch support."
           } >> "$GITHUB_STEP_SUMMARY"
