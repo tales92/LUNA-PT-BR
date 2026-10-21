@@ -1,0 +1,111 @@
+name: Build LUNA PT-BR + ZSO ZIP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-luna-zip-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_IMAGE: ps2max/dev@sha256:e390699d46818e7c736f414ae5b1789d3ef7d3d914ce646a8a7bd027bd7e4521
+    steps:
+      - name: Check out LUNA-PT-BR
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Initialize build submodules
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git submodule update --init nhddl neutrino opl
+
+      - name: Validate and apply the two requested customizations
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile tools/apply-luna-pt-br-zso.py
+          python3 tools/apply-luna-pt-br-zso.py "$GITHUB_WORKSPACE/nhddl"
+
+      - name: Build Neutrino runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/neutrino \
+            "$BUILD_IMAGE" sh -eu -c '
+              git config --global --add safe.directory /workspace/neutrino
+              make clean all release
+            '
+
+      - name: Build OPL runtime modules
+        shell: bash
+        run: |
+          set -euxo pipefail
+          pwsh -NoLogo -NoProfile -File tools/build-opl-core.ps1 -Image "$BUILD_IMAGE"
+
+      - name: Compile LUNA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_IMAGE" sh -eu -c '
+              git config --global --add safe.directory /workspace/nhddl
+              cmake -S /workspace/nhddl -B /workspace/nhddl/build-ci \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLUNA_EMULATOR_BUILD=OFF \
+                -DLUNA_ENABLE_PSXCORE=OFF
+              cmake --build /workspace/nhddl/build-ci --parallel 2
+              test -s /workspace/nhddl/build-ci/luna.elf
+            '
+
+      - name: Package installable FMCB ZIP
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          cp nhddl/build-ci/luna.elf dist/LUNA-Release-Candidate.elf
+          build_id="$(date -u +%Y%m%d)-${GITHUB_SHA:0:7}"
+          pwsh -NoLogo -NoProfile -File tools/package-fmcb.ps1 -LocalTest "$build_id"
+          ls -lh dist/*.zip dist/SHA256SUMS.txt
+
+      - name: Upload ZIP artifact
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: LUNA-PT-BR-ZSO-FMCB-${{ github.sha }}
+          path: |
+            dist/LUNA-local-test-*-FMCB-mc0.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## LUNA PT-BR + ZSO"
+            echo
+            echo "- Source revision: \`$GITHUB_SHA\`"
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- Build: passed"
+              echo "- ZIP artifact: [download from this workflow run](${{ steps.upload.outputs.artifact-url }})"
+            else
+              echo "- Build: failed; inspect the preceding step logs."
+            fi
+            echo "- The app changes are limited to the requested PT-BR default and ZSO support."
+          } >> "$GITHUB_STEP_SUMMARY"
