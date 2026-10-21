@@ -261,7 +261,7 @@ and [IGR return implementation](https://github.com/dnunezx/PSXCore/blob/e4218a47
 Open **Triangle → Game** for the selected title, or **Global** for defaults.
 Press **Start** to save changes.
 
-- **PS2 game core:** Neutrino is the default. Select OPL globally or per game.
+- **PS2 game core:** OPL is the default on a fresh setup in this fork. Select Neutrino globally or per game if needed. A saved per-drive preference in `/LUNA/gameCore.txt` overrides the fresh-setup default.
   OPL launch integration covers ATA/FAT32/exFAT, APA/HDL, USB, MX4SIO, iLink,
   MMCE, and UDPFS.
 - **Compatibility and video:** choose the settings for the selected PS2 core.
