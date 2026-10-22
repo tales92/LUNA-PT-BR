@@ -15,14 +15,14 @@ OLD_PROBE = r'''    int fd = 0;
     int attempts = 0;
     for (int i = 0; i < 8; i++) {
       result[4] = '0' + i;
-      printf("Resolve root: probing %s\\n", result);
+      printf("Resolve root: probing %s\n", result);
       if (probePath(result, 2)) {
-        printf("Resolve root: failed to probe\\n");
+        printf("Resolve root: failed to probe\n");
         return result; // No BDM devices were found
       }
       fd = open(result, O_RDONLY);
       if (fd >= 0) {
-        printf("Resolve root: found root path\\n");
+        printf("Resolve root: found root path\n");
         close(fd);
         return result;
       }
@@ -35,21 +35,21 @@ NEW_PROBE = r'''    // Prefer the supplied device, then allow for BDM renumberin
       if (pass) {
         // Loading an unused memory-card adapter can block USB startup.
         // Keep MX4SIO boot support as a separate, clean-driver fallback.
-        printf("Resolve root: trying MX4SIO boot fallback\\n");
+        printf("Resolve root: trying MX4SIO boot fallback\n");
         initStorageModules(MODE_MX4SIO, 1);
       }
       for (int i = 0; i < 10; i++) {
         result[4] = '0' + (originalIndex - '0' + i) % 10;
-        printf("Resolve root: probing %s\\n", result);
+        printf("Resolve root: probing %s\n", result);
         if (!probePath(result, 2)) {
-          printf("Resolve root: found root path\\n");
+          printf("Resolve root: found root path\n");
           return result;
         }
       }
     }
     // Keep the original directory available to the normal config fallbacks.
     result[4] = originalIndex;
-    printf("Resolve root: boot file not found on any BDM volume\\n");'''
+    printf("Resolve root: boot file not found on any BDM volume\n");'''
 
 def replace_once(source: str, old: str, new: str, label: str) -> str:
     if new in source:
