@@ -120,7 +120,7 @@ through the manager. Keep games and artwork on the game drive.
 
 ```text
 /CD/                         PS2 CD images
-/DVD/                        PS2 DVD images
+/DVD/                        PS2 DVD images (ISO, ZSO, and supported CHD)
 /VCD/                        PS1 VCD images
 /ART/                        Cover and disc artwork
 /ART/PSBBN/                  Square artwork
@@ -133,6 +133,24 @@ through the manager. Keep games and artwork on the game drive.
 An existing OPL library can retain its title-ID artwork conventions.
 Connect storage before launching LUNA; live insertion and removal are not
 supported by the Storage Devices menu.
+
+## Experimental native CHD support
+
+This branch adds native CHD reading to the bundled OPL runtime and LUNA's
+library scanner. Place supported `.chd` DVD images on a storage device scanned
+by LUNA; `/DVD/` is a convenient location. Use CHD files created from DVD-style
+PS2 ISOs with MAME's `chdman`, for example:
+
+```powershell
+chdman createdvd -i "Game.iso" -o "Game.chd" -c zlib -hs 262144 -us 2048
+```
+
+**Current format limits:** CHD v5, 2048-byte logical sectors, zlib codec,
+uncompressed hunks, and self-hunk aliases. Parent CHDs, CD-track CHDs, and
+LZMA/Huffman/FLAC/Zstandard codecs are not supported. Keep the source ISO until
+you have tested the CHD on your own console. The decoder is host-tested and the
+runtime build is checked in CI, but gameplay on a physical PS2 has not yet
+been validated. CHD metadata is read natively when LUNA scans the library.
 
 ### PlayStation setup
 
