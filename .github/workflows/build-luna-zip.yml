@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-luna-zip-${{ github.ref }}
+  group: build-luna-chd-zip-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
