@@ -47,7 +47,7 @@ jobs:
             -w /workspace/neutrino \
             "$BUILD_IMAGE" sh -eu -c '
               git config --global --add safe.directory /workspace/neutrino
-              make all release
+              make clean all release
             '
 
       - name: Build OPL runtime modules
@@ -84,7 +84,7 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/tools/matrix-luna-forwarder \
             "$BUILD_IMAGE" sh -eu -c '
-              make clean all
+              make all
               test -s BOOT2.ELF
             '
           mkdir -p dist/BOOT
