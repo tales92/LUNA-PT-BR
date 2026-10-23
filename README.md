@@ -74,6 +74,18 @@ a USB drive your PS2 can read.
    `mc0:/APP_LUNA/luna.elf`. Save the FMCB configuration.
 5. Connect the prepared game drive and start LUNA from FMCB.
 
+### Optional: direct Matrix Infinity boot with R2
+
+This fork's ZIP also contains `BOOT/BOOT2.ELF`, a small forwarder for a Matrix Infinity chip.
+
+1. Install the complete `APP_LUNA` folder at `mc0:/APP_LUNA/` as described above.
+2. Copy the package's `BOOT/BOOT2.ELF` to `mc0:/BOOT/BOOT2.ELF`. Merge it into the existing `BOOT` folder; **do not replace `BOOT.ELF`**, which can remain your R1/uLaunchELF shortcut.
+3. Fully power off the PS2. Hold **R2** while turning it on.
+
+The forwarder starts `mc0:/APP_LUNA/luna.elf` without moving or duplicating the LUNA application folder. `luna.yaml`, `neutrino.elf`, and the other runtime files remain beside the original ELF, and `return_path` should remain `mc0:/APP_LUNA/luna.elf`.
+
+**Status:** the forwarder is compiled as part of the CI package, but has not yet been tested on this specific physical PS2/Matrix setup. Keep the existing R1/uLaunchELF shortcut as a recovery path and verify R2 boot before relying on it.
+
 Keep the application folder intact:
 
 ```text

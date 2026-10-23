@@ -76,6 +76,21 @@ jobs:
               test -s /workspace/nhddl/build-ci/luna.elf
             '
 
+      - name: Build Matrix R2 LUNA forwarder
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/tools/matrix-luna-forwarder \
+            "$BUILD_IMAGE" sh -eu -c '
+              make clean all
+              test -s BOOT2.ELF
+            '
+          mkdir -p dist/BOOT
+          cp tools/matrix-luna-forwarder/BOOT2.ELF dist/BOOT/BOOT2.ELF
+          file dist/BOOT/BOOT2.ELF
+
       - name: Package installable FMCB ZIP
         shell: bash
         run: |
