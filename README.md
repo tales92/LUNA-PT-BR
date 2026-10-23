@@ -142,7 +142,7 @@ by LUNA; `/DVD/` is a convenient location. Use CHD files created from DVD-style
 PS2 ISOs with MAME's `chdman`, for example:
 
 ```powershell
-chdman createdvd -i "Game.iso" -o "Game.chd" -c zlib -hs 262144 -us 2048
+chdman createdvd -i "Game.iso" -o "Game.chd" -c zlib -hs 262144
 ```
 
 **Current format limits:** CHD v5, 2048-byte logical sectors, zlib codec,
