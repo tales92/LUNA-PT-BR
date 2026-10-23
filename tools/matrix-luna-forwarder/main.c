@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <fileio.h>
 #include <iopheap.h>
+#include <iopcontrol.h>
 #include <kernel.h>
 #include <loadfile.h>
 #include <sbv_patches.h>
