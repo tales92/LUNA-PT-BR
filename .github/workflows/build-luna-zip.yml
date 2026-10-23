@@ -37,22 +37,39 @@ jobs:
           set -euxo pipefail
           bash tools/apply-native-chd.sh "$GITHUB_WORKSPACE/opl"
 
-      - name: Validate native CHD reader against an ISO fixture
+      - name: Install CHD fixture tools
         shell: bash
         run: |
           set -euxo pipefail
           sudo apt-get update
           sudo apt-get install -y mame-tools genisoimage
+
+      - name: Create and verify a supported CHD fixture
+        shell: bash
+        run: |
+          set -euxo pipefail
           mkdir -p /tmp/chd-fixture/files
           dd if=/dev/zero of=/tmp/chd-fixture/files/repeated-zero-data.bin bs=1M count=4 status=none
           printf 'LUNA native CHD test fixture\n' > /tmp/chd-fixture/files/readme.txt
           genisoimage -quiet -o /tmp/chd-fixture.iso -V LUNACHDTEST -R /tmp/chd-fixture
           chdman createdvd -i /tmp/chd-fixture.iso -o /tmp/chd-fixture.chd -c zlib -hs 262144
           chdman verify -i /tmp/chd-fixture.chd
+
+      - name: Compile CHD reader host harness
+        shell: bash
+        run: |
+          set -euxo pipefail
           mkdir -p "$GITHUB_WORKSPACE/opl/tests"
           git -C "$GITHUB_WORKSPACE/opl" show 0e3fb918a2a0690553a4a254d7f4d89924ed14af:tests/chd_reader_test.c > "$GITHUB_WORKSPACE/opl/tests/chd_reader_test.c"
           gcc -std=c99 -O2 -DCHD_HOST_TEST -I "$GITHUB_WORKSPACE/opl/modules/isofs" "$GITHUB_WORKSPACE/opl/tests/chd_reader_test.c" "$GITHUB_WORKSPACE/opl/modules/isofs/chd.c" -o /tmp/chd-reader-test
-          /tmp/chd-reader-test /tmp/chd-fixture.chd /tmp/chd-fixture.iso
+          test -x /tmp/chd-reader-test
+
+      - name: Compare decoded CHD sectors against the source ISO
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euxo pipefail
+          timeout 60s /tmp/chd-reader-test /tmp/chd-fixture.chd /tmp/chd-fixture.iso
 
       - name: Validate and apply PT-BR, OPL-default, and ZSO customizations
         shell: bash
