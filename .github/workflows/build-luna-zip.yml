@@ -2,7 +2,7 @@ name: Build LUNA PT-BR + ZSO + OPL default ZIP
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/native-chd-matrix-r2]
   workflow_dispatch:
 
 permissions:
@@ -31,12 +31,35 @@ jobs:
           set -euxo pipefail
           git submodule update --init --recursive nhddl neutrino opl
 
+      - name: Apply native CHD reader to bundled OPL runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bash tools/apply-native-chd.sh "$GITHUB_WORKSPACE/opl"
+
+      - name: Validate native CHD reader against an ISO fixture
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y mame-tools genisoimage
+          mkdir -p /tmp/chd-fixture/files
+          dd if=/dev/zero of=/tmp/chd-fixture/files/repeated-zero-data.bin bs=1M count=4 status=none
+          printf 'LUNA native CHD test fixture\n' > /tmp/chd-fixture/files/readme.txt
+          genisoimage -quiet -o /tmp/chd-fixture.iso -V LUNACHDTEST -R /tmp/chd-fixture
+          chdman createdvd -i /tmp/chd-fixture.iso -o /tmp/chd-fixture.chd -c zlib -hs 262144 -us 2048
+          chdman verify -i /tmp/chd-fixture.chd
+          git -C "$GITHUB_WORKSPACE/opl" show 0e3fb918a2a0690553a4a254d7f4d89924ed14af:tests/chd_reader_test.c > /tmp/chd_reader_test.c
+          gcc -std=c99 -O2 -DCHD_HOST_TEST -I "$GITHUB_WORKSPACE/opl/modules/isofs" /tmp/chd_reader_test.c "$GITHUB_WORKSPACE/opl/modules/isofs/chd.c" -o /tmp/chd-reader-test
+          /tmp/chd-reader-test /tmp/chd-fixture.chd /tmp/chd-fixture.iso
+
       - name: Validate and apply PT-BR, OPL-default, and ZSO customizations
         shell: bash
         run: |
           set -euxo pipefail
           python3 -m py_compile tools/apply-luna-pt-br-zso.py
           python3 tools/apply-luna-pt-br-zso.py "$GITHUB_WORKSPACE/nhddl"
+          python3 tools/apply-luna-chd.py "$GITHUB_WORKSPACE/nhddl" "$GITHUB_WORKSPACE/opl"
 
       - name: Build Neutrino runtime
         shell: bash
@@ -105,7 +128,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: LUNA-PT-BR-ZSO-FMCB-${{ github.sha }}
+          name: LUNA-PT-BR-ZSO-CHD-MATRIX-R2-FMCB-${{ github.sha }}
           path: |
             dist/LUNA-local-test-*-FMCB-mc0.zip
             dist/SHA256SUMS.txt
@@ -117,7 +140,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## LUNA PT-BR + ZSO + OPL default"
+            echo "## LUNA PT-BR + ZSO + native CHD + OPL default + Matrix R2 boot"
             echo
             echo "- Source revision: \`$GITHUB_SHA\`"
             if [ "${{ job.status }}" = "success" ]; then
@@ -126,5 +149,6 @@ jobs:
             else
               echo "- Build: failed; inspect the preceding step logs."
             fi
-            echo "- App customizations: PT-BR default, OPL as the fresh-install game core, and ZSO discovery/launch support."
+            echo "- App customizations: PT-BR default, OPL as the fresh-install game core, ZSO discovery/launch support, CHD v5 DVD/zlib reader, and Matrix R2 forwarder."
+            echo "- CHD scope: 2048-byte DVD sectors, zlib codec, raw hunks and self-hunk aliases only; physical PS2 compatibility remains unverified."
           } >> "$GITHUB_STEP_SUMMARY"
