@@ -1,3 +1,5 @@
+#define NEWLIB_PORT_AWARE
+
 /*
  * Matrix Infinity R2 forwarder for LUNA-PT-BR.
  *
