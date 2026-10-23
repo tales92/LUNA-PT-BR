@@ -74,7 +74,7 @@ void chd_free(void *ptr) {
 }
 
 int chd_read_raw_data(u8 *addr, u32 size, u32 offset) {
-  if (chdTitleFd < 0 || offset > INT32_MAX ||
+  if (chdTitleFd < 0 ||
       lseek64(chdTitleFd, (int64_t)offset, SEEK_SET) < 0 ||
       readExact(chdTitleFd, addr, size))
     return -1;
