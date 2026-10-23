@@ -49,8 +49,9 @@ jobs:
           genisoimage -quiet -o /tmp/chd-fixture.iso -V LUNACHDTEST -R /tmp/chd-fixture
           chdman createdvd -i /tmp/chd-fixture.iso -o /tmp/chd-fixture.chd -c zlib -hs 262144
           chdman verify -i /tmp/chd-fixture.chd
-          git -C "$GITHUB_WORKSPACE/opl" show 0e3fb918a2a0690553a4a254d7f4d89924ed14af:tests/chd_reader_test.c > /tmp/chd_reader_test.c
-          gcc -std=c99 -O2 -DCHD_HOST_TEST -I "$GITHUB_WORKSPACE/opl/modules/isofs" /tmp/chd_reader_test.c "$GITHUB_WORKSPACE/opl/modules/isofs/chd.c" -o /tmp/chd-reader-test
+          mkdir -p "$GITHUB_WORKSPACE/opl/tests"
+          git -C "$GITHUB_WORKSPACE/opl" show 0e3fb918a2a0690553a4a254d7f4d89924ed14af:tests/chd_reader_test.c > "$GITHUB_WORKSPACE/opl/tests/chd_reader_test.c"
+          gcc -std=c99 -O2 -DCHD_HOST_TEST -I "$GITHUB_WORKSPACE/opl/modules/isofs" "$GITHUB_WORKSPACE/opl/tests/chd_reader_test.c" "$GITHUB_WORKSPACE/opl/modules/isofs/chd.c" -o /tmp/chd-reader-test
           /tmp/chd-reader-test /tmp/chd-fixture.chd /tmp/chd-fixture.iso
 
       - name: Validate and apply PT-BR, OPL-default, and ZSO customizations
