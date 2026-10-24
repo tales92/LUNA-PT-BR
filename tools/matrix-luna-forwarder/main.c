@@ -8,9 +8,7 @@
  * discover luna.yaml and runtime files beside luna.elf.
  *
  * This build targets an installation in physical memory-card slot 1 (mc0:).
- * LoadExecPS2's ROM/moduleload path has an MC-port inversion on some setups:
- * the load path uses mc1 to reach physical mc0, but argv[0] remains mc0 so
- * LUNA resolves its own configuration and return_path correctly.
+ * The validation path and LoadExecPS2 path must both point to that same card.
  *
  * Physical-console validation is still required after compilation.
  */
@@ -24,7 +22,7 @@
 #include <sbv_patches.h>
 #include <sifrpc.h>
 
-#define LUNA_LOAD_PATH "mc1:/APP_LUNA/luna.elf"
+#define LUNA_LOAD_PATH "mc0:/APP_LUNA/luna.elf"
 #define LUNA_ARGV0     "mc0:/APP_LUNA/luna.elf"
 
 static void reset_iop(void) {
