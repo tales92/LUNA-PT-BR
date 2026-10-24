@@ -88,7 +88,7 @@ jobs:
             -w /workspace/neutrino \
             "$BUILD_IMAGE" sh -eu -c '
               git config --global --add safe.directory /workspace/neutrino
-              make all release
+              make clean all release
             '
 
       - name: Build OPL runtime modules
@@ -126,7 +126,7 @@ jobs:
             -w /workspace/tools/matrix-luna-forwarder \
             "$BUILD_IMAGE" sh -eu -c '
               grep -Fq "#define LUNA_LOAD_PATH \"mc0:/APP_LUNA/luna.elf\"" main.c
-              make clean all
+              make all
               test -s BOOT2.ELF
               mips64r5900el-ps2-elf-strip --strip-debug BOOT2.ELF
               test -s BOOT2.ELF
