@@ -74,17 +74,18 @@ a USB drive your PS2 can read.
    `mc0:/APP_LUNA/luna.elf`. Save the FMCB configuration.
 5. Connect the prepared game drive and start LUNA from FMCB.
 
-### Optional: direct Matrix Infinity boot with R2
+### Optional: direct Matrix Infinity boot with R1 (DEV1)
 
-This fork's ZIP also contains `BOOT/BOOT2.ELF`, a small forwarder for a Matrix Infinity chip.
+This fork's ZIP contains `BOOT/BOOT.ELF`, a small forwarder for the Matrix Infinity DEV1/R1 shortcut. Matrix DEV1 expects the file at `mc0:/BOOT/BOOT.ELF`; R2 uses a different filename, `BOOT2.ELF`.
 
 1. Install the complete `APP_LUNA` folder at `mc0:/APP_LUNA/` as described above.
-2. Copy the package's `BOOT/BOOT2.ELF` to `mc0:/BOOT/BOOT2.ELF`. Merge it into the existing `BOOT` folder; **do not replace `BOOT.ELF`**, which can remain your R1/uLaunchELF shortcut.
-3. Fully power off the PS2. Hold **R2** while turning it on.
+2. Back up your existing `mc0:/BOOT/BOOT.ELF` (which may currently be uLaunchELF/wLaunchELF) to a PC or rename it to `BOOT3.ELF` if you want to preserve a recovery launcher reachable using L2.
+3. Copy the package's `BOOT/BOOT.ELF` to `mc0:/BOOT/BOOT.ELF`, **replacing the old BOOT.ELF**. Do not put it in the root of the memory card or inside `APP_LUNA`.
+4. Fully power off the PS2, then hold **R1** on controller 1 while turning it on. Alternatively set Matrix `BOOT MODE` to `DEV1` to attempt this shortcut automatically.
 
-The forwarder starts `mc0:/APP_LUNA/luna.elf` without moving or duplicating the LUNA application folder. `luna.yaml`, `neutrino.elf`, and the other runtime files remain beside the original ELF, and `return_path` should remain `mc0:/APP_LUNA/luna.elf`.
+The forwarder starts `mc0:/APP_LUNA/luna.elf` without moving or duplicating the LUNA application folder. `luna.yaml`, `neutrino.elf`, `config/`, `modules/`, and OPL runtime files remain in the original `APP_LUNA` structure. The configured `return_path` should remain `mc0:/APP_LUNA/luna.elf`.
 
-**Status:** the forwarder is compiled as part of the CI package, but has not yet been tested on this specific physical PS2/Matrix setup. Keep the existing R1/uLaunchELF shortcut as a recovery path and verify R2 boot before relying on it.
+**Status:** the R1 forwarder is compiled in CI, but still requires testing on this physical PS2/Matrix setup. Keep a backup of the old file manager ELF before replacing it.
 
 Keep the application folder intact:
 
