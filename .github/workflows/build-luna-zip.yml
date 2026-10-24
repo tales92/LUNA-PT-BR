@@ -117,7 +117,7 @@ jobs:
               test -s /workspace/nhddl/build-ci/luna.elf
             '
 
-      - name: Build Matrix R2 LUNA forwarder
+      - name: Build Matrix R1 LUNA forwarder
         shell: bash
         run: |
           set -euxo pipefail
@@ -127,15 +127,15 @@ jobs:
             "$BUILD_IMAGE" sh -eu -c '
               grep -Fq "#define LUNA_LOAD_PATH \"mc0:/APP_LUNA/luna.elf\"" main.c
               make all
-              test -s BOOT2.ELF
-              mips64r5900el-ps2-elf-strip --strip-debug BOOT2.ELF
-              test -s BOOT2.ELF
-              ls -lh BOOT2.ELF
+              test -s BOOT.ELF
+              mips64r5900el-ps2-elf-strip --strip-debug BOOT.ELF
+              test -s BOOT.ELF
+              ls -lh BOOT.ELF
             '
           mkdir -p dist/BOOT
-          cp tools/matrix-luna-forwarder/BOOT2.ELF dist/BOOT/BOOT2.ELF
-          file dist/BOOT/BOOT2.ELF
-          ls -lh dist/BOOT/BOOT2.ELF
+          cp tools/matrix-luna-forwarder/BOOT.ELF dist/BOOT/BOOT.ELF
+          file dist/BOOT/BOOT.ELF
+          ls -lh dist/BOOT/BOOT.ELF
 
       - name: Package installable FMCB ZIP
         shell: bash
@@ -151,7 +151,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: LUNA-PT-BR-ZSO-CHD-MATRIX-R2-FMCB-${{ github.sha }}
+          name: LUNA-PT-BR-ZSO-CHD-MATRIX-R1-FMCB-${{ github.sha }}
           path: |
             dist/LUNA-local-test-*-FMCB-mc0.zip
             dist/SHA256SUMS.txt
@@ -163,7 +163,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## LUNA PT-BR + ZSO + native CHD + OPL default + Matrix R2 boot"
+            echo "## LUNA PT-BR + ZSO + native CHD + OPL default + Matrix R1 boot"
             echo
             echo "- Source revision: \`$GITHUB_SHA\`"
             if [ "${{ job.status }}" = "success" ]; then
@@ -174,5 +174,5 @@ jobs:
             fi
             echo "- App customizations: PT-BR default, OPL as the fresh-install game core, ZSO discovery/launch support, CHD v5 DVD/zlib reader, and Matrix R2 forwarder."
             echo "- CHD scope: 2048-byte DVD sectors, zlib codec, raw hunks and self-hunk aliases only; physical PS2 compatibility remains unverified."
-            echo "- Matrix forwarder: use the mc0 slot-1 path consistently and strip debug symbols before packaging."
+            echo "- Matrix R1 forwarder: packaged as mc0:/BOOT/BOOT.ELF; it loads mc0:/APP_LUNA/luna.elf, and debug symbols are stripped."
           } >> "$GITHUB_STEP_SUMMARY"
