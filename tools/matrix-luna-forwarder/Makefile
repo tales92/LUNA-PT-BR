@@ -1,6 +1,6 @@
 EE_BIN = BOOT.ELF
 EE_OBJS = main.o
-EE_LIBS = -lpatches -ldebug
+EE_LIBS = -lpatches -ldebug -lelf-loader
 
 .PHONY: all
 all: $(EE_BIN)
