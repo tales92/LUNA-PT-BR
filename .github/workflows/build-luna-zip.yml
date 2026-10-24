@@ -172,7 +172,7 @@ jobs:
             else
               echo "- Build: failed; inspect the preceding step logs."
             fi
-            echo "- App customizations: PT-BR default, OPL as the fresh-install game core, ZSO discovery/launch support, CHD v5 DVD/zlib reader, and Matrix R2 forwarder."
+            echo "- App customizations: PT-BR default, OPL as the fresh-install game core, ZSO discovery/launch support, CHD v5 DVD/zlib reader, and Matrix R1/DEV1 forwarder."
             echo "- CHD scope: 2048-byte DVD sectors, zlib codec, raw hunks and self-hunk aliases only; physical PS2 compatibility remains unverified."
             echo "- Matrix R1 forwarder: packaged as mc0:/BOOT/BOOT.ELF; it loads mc0:/APP_LUNA/luna.elf, and debug symbols are stripped."
           } >> "$GITHUB_STEP_SUMMARY"
