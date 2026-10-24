@@ -1,4 +1,4 @@
-EE_BIN = BOOT2.ELF
+EE_BIN = BOOT.ELF
 EE_OBJS = main.o
 EE_LIBS = -lpatches -ldebug
 
