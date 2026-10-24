@@ -125,12 +125,17 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/tools/matrix-luna-forwarder \
             "$BUILD_IMAGE" sh -eu -c '
-              make all
+              grep -Fq '#define LUNA_LOAD_PATH "mc0:/APP_LUNA/luna.elf"' main.c
+              make clean all
               test -s BOOT2.ELF
+              mips64r5900el-ps2-elf-strip --strip-debug BOOT2.ELF
+              test -s BOOT2.ELF
+              ls -lh BOOT2.ELF
             '
           mkdir -p dist/BOOT
           cp tools/matrix-luna-forwarder/BOOT2.ELF dist/BOOT/BOOT2.ELF
           file dist/BOOT/BOOT2.ELF
+          ls -lh dist/BOOT/BOOT2.ELF
 
       - name: Package installable FMCB ZIP
         shell: bash
@@ -169,4 +174,5 @@ jobs:
             fi
             echo "- App customizations: PT-BR default, OPL as the fresh-install game core, ZSO discovery/launch support, CHD v5 DVD/zlib reader, and Matrix R2 forwarder."
             echo "- CHD scope: 2048-byte DVD sectors, zlib codec, raw hunks and self-hunk aliases only; physical PS2 compatibility remains unverified."
+            echo "- Matrix forwarder: use the mc0 slot-1 path consistently and strip debug symbols before packaging."
           } >> "$GITHUB_STEP_SUMMARY"
