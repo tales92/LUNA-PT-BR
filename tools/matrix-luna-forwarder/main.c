@@ -1,9 +1,9 @@
 #define NEWLIB_PORT_AWARE
 
 /*
- * Matrix Infinity R2 forwarder for LUNA-PT-BR.
+ * Matrix Infinity DEV1/R1 forwarder for LUNA-PT-BR.
  *
- * R2 boots mc0:/BOOT/BOOT2.ELF. This launcher targets the unchanged
+ * R1/DEV1 boots mc0:/BOOT/BOOT.ELF. This launcher targets the unchanged
  * APP_LUNA folder and supplies its real mc0 path as argv[0], allowing LUNA to
  * discover luna.yaml and runtime files beside luna.elf.
  *
@@ -37,7 +37,7 @@ static void reset_iop(void) {
 static void fatal_error(const char *message) {
   init_scr();
   scr_clear();
-  scr_printf("\nLUNA R2 forwarder\n\n%s\n\nExpected LUNA path:\n%s\n",
+  scr_printf("\nLUNA R1 forwarder\n\n%s\n\nExpected LUNA path:\n%s\n",
              message, LUNA_ARGV0);
   for (;;) {
     SleepThread();
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
   init_scr();
   scr_clear();
-  scr_printf("LUNA R2 forwarder\n\nPreparing memory-card access...\n");
+  scr_printf("LUNA R1 forwarder\n\nPreparing memory-card access...\n");
 
   reset_iop();
   if (SifInitIopHeap() < 0)
