@@ -4,15 +4,17 @@
  * Matrix Infinity DEV1/R1 forwarder for LUNA-PT-BR.
  *
  * R1/DEV1 boots mc0:/BOOT/BOOT.ELF. This launcher targets the unchanged
- * APP_LUNA folder and supplies its real mc0 path as argv[0], allowing LUNA to
+ * APP_LUNA folder and supplies its real mc path as argv[0], allowing LUNA to
  * discover luna.yaml and runtime files beside luna.elf.
  *
- * This build targets an installation in physical memory-card slot 1 (mc0:).
- * The validation path and LoadExecPS2 path must both point to that same card.
+ * IMPORTANT: LoadExecPS2() only supports rom0: and cdrom: paths. Since LUNA
+ * lives on a memory card, use PS2SDK's LoadELFFromFile() ELF loader instead.
  *
- * Physical-console validation is still required after compilation.
+ * This build targets an installation in physical memory-card slot 1 (mc0:).
+ * The validation path and ELF loader path must both point to that same card.
  */
 #include <debug.h>
+#include <elf-loader.h>
 #include <fcntl.h>
 #include <fileio.h>
 #include <iopheap.h>
@@ -46,9 +48,9 @@ static void fatal_error(const char *message) {
 
 int main(int argc, char *argv[]) {
   int fd;
-  char *target_argv[1];
   (void)argc;
   (void)argv;
+  char *target_argv[1];
 
   init_scr();
   scr_clear();
@@ -77,11 +79,16 @@ int main(int argc, char *argv[]) {
   fioClose(fd);
 
   scr_clear();
-  scr_printf("Starting LUNA...\n%s\n", LUNA_ARGV0);
+  scr_printf("Loading LUNA from memory card...\n%s\n", LUNA_LOAD_PATH);
   target_argv[0] = (char *)LUNA_ARGV0;
-  LoadExecPS2(LUNA_LOAD_PATH, 1, target_argv);
 
-  /* LoadExecPS2 is declared noreturn; this is defensive only. */
-  fatal_error("The system loader unexpectedly returned.");
+  /*
+   * LoadExecPS2() cannot execute an ELF directly from mc0:. The PS2SDK ELF
+   * loader reads the file from the memory card and transfers control to it.
+   * On successful execution this call does not return.
+   */
+  LoadELFFromFile(LUNA_LOAD_PATH, 1, target_argv);
+
+  fatal_error("The ELF loader returned unexpectedly. LUNA could not be started.");
   return 1;
 }
