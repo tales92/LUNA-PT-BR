@@ -2,7 +2,7 @@ name: Build LUNA PT-BR + ZSO + OPL default ZIP
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/pt-br-zso-opl-default"]
   workflow_dispatch:
 
 permissions:
