@@ -9,7 +9,8 @@ merge_runtime() {
   local upstream_url="$2"
   local upstream_branch="$3"
   local label="$4"
-  local conflict_strategy="${5:-stop}"
+  local expected_sha="$5"
+  local conflict_strategy="${6:-stop}"
   local -a merge_options=()
   if [[ "$conflict_strategy" == "ours" ]]; then
     merge_options=(-X ours)
@@ -23,6 +24,12 @@ merge_runtime() {
   git -C "$path" config user.email "luna-runtime-integration@users.noreply.github.com"
   git -C "$path" fetch --no-tags "$upstream_url" "$upstream_branch"
   local upstream_ref="FETCH_HEAD"
+  local fetched_sha
+  fetched_sha="$(git -C "$path" rev-parse "$upstream_ref")"
+  if [[ "$fetched_sha" != "$expected_sha" ]]; then
+    echo "::error::$label upstream moved: expected $expected_sha, fetched $fetched_sha. Review and update tools/upstream-runtime-pins.json."
+    exit 1
+  fi
 
   if git -C "$path" merge-base --is-ancestor "$upstream_ref" HEAD; then
     echo "$label is already at or ahead of upstream."
