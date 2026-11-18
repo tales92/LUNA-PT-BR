@@ -354,10 +354,10 @@ jobs:
               echo "### Source revisions"
               cat source-revisions.txt
             fi
-            if [ "\${{ job.status }}" = "success" ]; then
+            if [ "${{ job.status }}" = "success" ]; then
               echo
               echo "- Build and package: passed"
-              echo "- Release: \${{ steps.release.outputs.url }}"
+              echo "- Release: ${{ steps.release.outputs.url }}"
               echo "- Physical PS2 testing: still required"
             else
               echo
