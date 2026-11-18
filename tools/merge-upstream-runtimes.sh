@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Merge upstream Neutrino and OPL changes into temporary submodule checkouts.
-# This runs only in the integration branch's CI workspace. No upstream fork is
-# modified. Neutrino overlap hunks keep the LUNA side and receive narrow adapters.
+# Merge reviewed upstream Neutrino and OPL commits into temporary submodule checkouts.
+# This runs only in CI; the upstream repositories are never modified.
 set -Eeuo pipefail
 
 merge_runtime() {
@@ -27,7 +26,7 @@ merge_runtime() {
   local fetched_sha
   fetched_sha="$(git -C "$path" rev-parse "$upstream_ref")"
   if [[ "$fetched_sha" != "$expected_sha" ]]; then
-    echo "::error::$label upstream moved: expected $expected_sha, fetched $fetched_sha. Review and update tools/upstream-runtime-pins.json."
+    echo "::error::$label upstream moved: expected $expected_sha, fetched $fetched_sha. Review tools/upstream-runtime-pins.json before updating."
     exit 1
   fi
 
@@ -38,13 +37,11 @@ merge_runtime() {
       local conflicts
       conflicts="$(git -C "$path" diff --name-only --diff-filter=U || true)"
       if [[ -n "$conflicts" ]]; then
-        echo "::error::$label has merge conflicts. No automatic side preference was applied."
-        echo "Conflicted paths:"
+        echo "::error::$label has unresolved merge conflicts. No automatic side preference was applied."
         printf "%s\n" "$conflicts"
       else
         echo "::error::Git could not create the $label merge commit; inspect the error above."
       fi
-      echo "Conflict summary:"
       git -C "$path" status --short || true
       git -C "$path" diff --cc || true
       exit 1
@@ -53,7 +50,6 @@ merge_runtime() {
 
   echo "Integrated revision:"
   git -C "$path" log -1 --oneline
-  git -C "$path" diff --check HEAD^ HEAD 2>/dev/null || true
   echo "::endgroup::"
 }
 
@@ -62,10 +58,11 @@ merge_runtime \
   "https://github.com/ps2max32/neutrino.git" \
   "master" \
   "Neutrino" \
+  "1310a9af7c7395381042f49dd77c4e002515d0f7" \
   "ours"
 
-# Keep LUNA's UDPFS IP override and its HostFS build notes. Add the official
-# SMB/NFS backend condition and documentation without discarding either side.
+# Preserve LUNA's UDPFS IP override and HostFS notes; add the upstream SMB/NFS
+# backend condition and docs without discarding either side's behavior.
 python3 - <<'PY'
 from pathlib import Path
 import subprocess
@@ -100,20 +97,19 @@ if "\n## SMB\n" not in readme:
 print("Applied LUNA-preserving Neutrino SMB/NFS adaptations.")
 PY
 
-# The official Neutrino SMB and NFS backends add nested source dependencies.
-# They only exist after the upstream merge, so initialize them afterwards.
+# The official Neutrino SMB/NFS backends have nested source dependencies.
 git -C neutrino submodule sync --recursive
 git -C neutrino submodule update --init --recursive
 
-# OPL is merged without a preferred side. Any conflicts are reviewed separately.
+# OPL is merged without a preferred side. Any conflicts stop CI for review.
 merge_runtime \
   "opl" \
   "https://github.com/ps2homebrew/Open-PS2-Loader.git" \
   "master" \
-  "Open PS2 Loader" \\
+  "Open PS2 Loader" \
   "b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
 
-echo "Both upstream runtime merges completed without unresolved conflicts."
+echo "Both pinned upstream runtime merges completed."
 echo "Neutrino:"
 git -C neutrino log -1 --oneline
 echo "OPL:"
