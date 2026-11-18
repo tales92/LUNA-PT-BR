@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-luna-zip-${{ github.ref }}
@@ -122,6 +122,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Publish GitHub pre-release
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-release]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          command -v gh
+          shopt -s nullglob
+          packages=(dist/LUNA-local-test-*-FMCB-mc0.zip)
+          if [[ ${#packages[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly one installable FMCB package; found ${#packages[@]}"
+            exit 1
+          fi
+          test -s dist/SHA256SUMS.txt
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+          tag="luna-ptbr-2026.11.18-${GITHUB_SHA:0:7}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists; refusing to overwrite it."
+            exit 1
+          fi
+          gh release create "$tag" "${packages[0]}" dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "LUNA PT-BR — Pré-lançamento OPL + Neutrino" \
+            --notes-file docs/UPSTREAM-INTEGRATION.md \
+            --prerelease
       - name: Build summary
         if: always()
         shell: bash
