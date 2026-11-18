@@ -109,6 +109,8 @@ merge_runtime \
   "Open PS2 Loader" \
   "b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
 
+python3 tools/apply-luna-opl-igr-adapter.py
+
 echo "Both pinned upstream runtime merges completed."
 echo "Neutrino:"
 git -C neutrino log -1 --oneline
