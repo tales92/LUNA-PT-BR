@@ -1,43 +1,183 @@
-name: Build LUNA PT-BR + ZSO + OPL default FMCB package
+name: Sync, build and publish LUNA PT-BR
 
 on:
-  push:
-    branches: [main, refresh/luna-official-latest-2026-11-18]
+  # Scheduled workflows run from the repository default branch (main).
+  # The build job always checks out the maintained integration branch below.
+  schedule:
+    - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      force_publish:
+        description: "Build and publish even when upstream sources have not changed"
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches:
+      - refresh/luna-official-latest-2026-11-18
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 concurrency:
-  group: luna-ptbr-build-${{ github.ref }}
+  group: luna-ptbr-upstream-release
   cancel-in-progress: false
 
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 10
+    outputs:
+      should_build: ${ steps.decision.outputs.should_build }}
+      luna_sha: ${ steps.heads.outputs.luna_sha }}
+      nhddl_sha: ${ steps.heads.outputs.nhddl_sha }}
+      neutrino_sha: ${ steps.heads.outputs.neutrino_sha }}
+      opl_sha: ${ steps.heads.outputs.opl_sha }}
+    steps:
+      - name: Resolve the latest official commits
+        id: heads
+        shell: bash
+        run: |
+          set -euo pipefail
+          resolve() {
+            local url="$1" ref="$2" sha
+            sha="$(git ls-remote --exit-code "$url" "$ref" | awk 'NR == 1 { print $1 }')"
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Could not resolve $url $ref"
+              exit 1
+            fi
+            printf '%s' "$sha"
+          }
+
+          luna="$(resolve https://github.com/dnunezx/LUNA.git refs/heads/main)"
+          nhddl="$(resolve https://github.com/dnunezx/nhddl-luna.git refs/heads/luna)"
+          neutrino="$(resolve https://github.com/ps2max32/neutrino.git refs/heads/master)"
+          opl="$(resolve https://github.com/ps2homebrew/Open-PS2-Loader.git refs/heads/master)"
+
+          {
+            echo "luna_sha=$luna"
+            echo "nhddl_sha=$nhddl"
+            echo "neutrino_sha=$neutrino"
+            echo "opl_sha=$opl"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Resolved upstream HEADs:"
+          echo "LUNA:      $luna"
+          echo "NHDDL:     $nhddl"
+          echo "Neutrino:  $neutrino"
+          echo "OPL:       $opl"
+
+      - name: Skip scheduled run when all upstreams are unchanged
+        id: decision
+        shell: bash
+        env:
+          GH_TOKEN: ${ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${ github.event_name }}
+          FORCE_PUBLISH: ${ inputs.force_publish }}
+          LUNA_SHA: ${ steps.heads.outputs.luna_sha }}
+          NHDDL_SHA: ${ steps.heads.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${ steps.heads.outputs.neutrino_sha }}
+          OPL_SHA: ${ steps.heads.outputs.opl_sha }}
+        run: |
+          set -euo pipefail
+          should_build=true
+
+          if [[ "$EVENT_NAME" == "schedule" && "$FORCE_PUBLISH" != "true" ]]; then
+            latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')"
+            if [[ -n "$latest_tag" ]]; then
+              mkdir -p .previous-release
+              if gh release download "$latest_tag" \
+                  --pattern source-revisions.txt \
+                  --dir .previous-release >/dev/null 2>&1; then
+                previous=".previous-release/source-revisions.txt"
+                same=true
+                for key in luna_upstream nhddl_frontend neutrino_upstream opl_upstream; do
+                  current=""
+                  case "$key" in
+                    luna_upstream) current="$LUNA_SHA" ;;
+                    nhddl_frontend) current="$NHDDL_SHA" ;;
+                    neutrino_upstream) current="$NEUTRINO_SHA" ;;
+                    opl_upstream) current="$OPL_SHA" ;;
+                  esac
+                  old="$(awk -F= -v key="$key" '$1 == key { print $2; exit }' "$previous")"
+                  if [[ -z "$old" || "$old" != "$current" ]]; then
+                    same=false
+                    break
+                  fi
+                done
+                if [[ "$same" == "true" ]]; then
+                  should_build=false
+                  echo "All four official source revisions match the latest Release ($latest_tag)."
+                fi
+              else
+                echo "Latest Release has no source-revisions.txt; running a full build."
+              fi
+            else
+              echo "No prior Release found; creating the first automated build."
+            fi
+          fi
+
+          echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     env:
       BUILD_IMAGE: ps2max/dev@sha256:e390699d46818e7c736f414ae5b1789d3ef7d3d914ce646a8a7bd027bd7e4521
     steps:
-      - name: Check out the selected LUNA revision
+      - name: Check out the maintained integration branch
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: refresh/luna-official-latest-2026-11-18
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Fetch exact LUNA source dependencies
+      - name: Configure the integration identity
         shell: bash
+        run: |
+          git config user.name "LUNA Upstream Automation"
+          git config user.email "luna-upstream-automation@users.noreply.github.com"
+
+      - name: Merge latest LUNA and refresh official source pins
+        id: sync
+        shell: bash
+        env:
+          LUNA_SHA: ${ needs.prepare.outputs.luna_sha }}
+          NHDDL_SHA: ${ needs.prepare.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${ needs.prepare.outputs.neutrino_sha }}
+          OPL_SHA: ${ needs.prepare.outputs.opl_sha }}
+        run: |
+          set -euo pipefail
+          bash tools/sync-upstream.sh \
+            "$LUNA_SHA" "$NHDDL_SHA" "$NEUTRINO_SHA" "$OPL_SHA"
+          echo "integration_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the exact LUNA build dependencies
+        shell: bash
+        env:
+          LUNA_SHA: ${ needs.prepare.outputs.luna_sha }}
+          NHDDL_SHA: ${ needs.prepare.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${ needs.prepare.outputs.neutrino_sha }}
+          OPL_SHA: ${ needs.prepare.outputs.opl_sha }}
         run: |
           set -euo pipefail
           python3 tools/fetch-dependencies.py
           {
-            printf 'luna=%s\n' "$GITHUB_SHA"
-            for component in nhddl neutrino opl psxcore; do
-              printf '%s=%s\n' "$component" "$(git -C "$component" rev-parse HEAD)"
-            done
-          } | tee source-revisions.txt
+            printf 'luna_upstream=%s\n' "$LUNA_SHA"
+            printf 'nhddl_frontend=%s\n' "$NHDDL_SHA"
+            printf 'neutrino_upstream=%s\n' "$NEUTRINO_SHA"
+            printf 'opl_upstream=%s\n' "$OPL_SHA"
+            printf 'integration_commit=%s\n' "$(git rev-parse HEAD)"
+            printf 'nhddl_dependency=%s\n' "$(git -C nhddl rev-parse HEAD)"
+            printf 'neutrino_fork_base=%s\n' "$(git -C neutrino rev-parse HEAD)"
+            printf 'opl_fork_base=%s\n' "$(git -C opl rev-parse HEAD)"
+            printf 'psxcore=%s\n' "$(git -C psxcore rev-parse HEAD)"
+          } > source-revisions.txt
 
-      - name: Integrate the latest official Neutrino and OPL commits
+      - name: Integrate the current official Neutrino and OPL commits
         shell: bash
         run: |
           set -euxo pipefail
@@ -47,25 +187,32 @@ jobs:
           import json
           import subprocess
           from pathlib import Path
-          manifest_path = Path('tools/dependencies.json')
-          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          for name in ('neutrino', 'opl'):
-              revision = subprocess.check_output(['git', '-C', name, 'rev-parse', 'HEAD'], text=True).strip()
-              with Path('source-revisions.txt').open('a', encoding='utf-8') as output:
-                  output.write(f'{name}_integrated={revision}' + chr(10))
-              if name == 'opl':
-                  manifest[name]['revision'] = revision
-          manifest_path.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+
+          manifest_path = Path("tools/dependencies.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          for name in ("neutrino", "opl"):
+              revision = subprocess.check_output(
+                  ["git", "-C", name, "rev-parse", "HEAD"], text=True
+              ).strip()
+              with Path("source-revisions.txt").open("a", encoding="utf-8") as output:
+                  output.write(f"{name}_integrated={revision}\n")
+              if name == "opl":
+                  manifest[name]["revision"] = revision
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
           PY
 
-      - name: Apply PT-BR default, OPL default, and ZSO support
+      - name: Apply PT-BR default, OPL default and ZSO support
         shell: bash
         run: |
           set -euxo pipefail
           python3 -m py_compile tools/apply-luna-pt-br-zso.py
           python3 tools/apply-luna-pt-br-zso.py "$GITHUB_WORKSPACE/nhddl"
 
-      - name: Build Neutrino and its SMB/NFS runtime modules
+      - name: Build Neutrino and its SMB/NFS modules
         shell: bash
         run: |
           set -euxo pipefail
@@ -110,52 +257,110 @@ jobs:
           cp tools/matrix-luna-forwarder/BOOT2.ELF dist/BOOT/BOOT2.ELF
           file dist/BOOT/BOOT2.ELF
 
-      - name: Package and verify the FMCB installation ZIP
+      - name: Resolve a unique release version
+        id: version
+        shell: bash
+        run: |
+          patch=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          version="v$(date -u +%Y.%m).$patch"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Preparing package $version"
+
+      - name: Package the installable FMCB ZIP
+        id: package
         shell: pwsh
+        env:
+          BUILD_VERSION: ${ steps.version.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
+          $version = $env:BUILD_VERSION
           New-Item -ItemType Directory -Path dist -Force | Out-Null
-          $buildId = (Get-Date).ToUniversalTime().ToString('yyyyMMdd') + '-' + $env:GITHUB_SHA.Substring(0,7)
-          Copy-Item -LiteralPath nhddl/build-work-artifact/luna.elf -Destination "dist/LUNA-local-test-$buildId.elf"
-          ./tools/package-fmcb.ps1 -LocalTest $buildId -PsxcoreBuildDirectory nhddl/build-work-artifact
+          Copy-Item -LiteralPath nhddl/build-work-artifact/luna.elf -Destination "dist/LUNA-$version.elf"
+          ./tools/package-fmcb.ps1 -Version $version -PsxcoreBuildDirectory nhddl/build-work-artifact
           Push-Location dist
           try { sha256sum -c SHA256SUMS.txt } finally { Pop-Location }
-          if (-not (Test-Path -LiteralPath "dist/LUNA-local-test-$buildId-FMCB-mc0.zip")) {
-            throw 'The installable FMCB ZIP was not generated.'
+          $archive = "dist/LUNA-$version-FMCB-mc0.zip"
+          if (-not (Test-Path -LiteralPath $archive)) {
+            throw "The installable package was not generated: $archive"
           }
+          "version=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Upload the validated build artifact
-        id: upload
+      - name: Upload validated build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: LUNA-PT-BR-ZSO-OPL-${{ github.sha }}
+          name: LUNA-PT-BR-${ steps.package.outputs.version }}
           path: |
-            dist/LUNA-local-test-*-FMCB-mc0.zip
+            dist/LUNA-${ steps.package.outputs.version }}-FMCB-mc0.zip
             dist/SHA256SUMS.txt
             source-revisions.txt
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
+
+      - name: Publish GitHub pre-release
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${ secrets.GITHUB_TOKEN }}
+          VERSION: ${ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          target="$(git rev-parse HEAD)"
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "::error::Tag $VERSION already exists; refusing to overwrite a release."
+            exit 1
+          fi
+          git tag -a "$VERSION" "$target" -m "LUNA PT-BR $VERSION"
+          git push origin "refs/tags/$VERSION"
+
+          {
+            echo "Automated LUNA PT-BR build."
+            echo
+            echo "- Portuguese (Brazil) is the fresh-install language."
+            echo "- OPL is the default fresh-install PS2 game core."
+            echo "- ZSO discovery and OPL routing are included."
+            echo "- Matrix Infinity R2 forwarder and Neutrino SMB/NFS modules are bundled."
+            echo "- This is an automated pre-release. Physical PlayStation 2 validation is still required."
+            echo
+            echo "### Exact source revisions"
+            echo
+            while IFS= read -r line; do echo "- $line"; done < source-revisions.txt
+            echo
+            echo "Verify the package using SHA256SUMS.txt."
+          } > release-notes.md
+
+          archive="dist/LUNA-$VERSION-FMCB-mc0.zip"
+          gh release create "$VERSION" \
+            "$archive" \
+            dist/SHA256SUMS.txt \
+            source-revisions.txt \
+            --title "LUNA PT-BR $VERSION" \
+            --notes-file release-notes.md \
+            --prerelease \
+            --verify-tag
+          release_url="$(gh release view "$VERSION" --json url --jq '.url')"
+          echo "url=$release_url" >> "$GITHUB_OUTPUT"
 
       - name: Build summary
         if: always()
         shell: bash
         run: |
           {
-            echo "## LUNA PT-BR + ZSO + OPL default"
+            echo "## LUNA PT-BR — automatic upstream build"
             echo
-            echo "- LUNA source: $GITHUB_SHA"
-            echo "- Frontend: df302ea8d961df17594d8c581958406ced203be7"
-            echo "- Neutrino fork base: 669acaa3838770481e4f9b5a708c133c3a4e7278"
-            echo "- Neutrino official upstream: 1310a9af7c7395381042f49dd77c4e002515d0f7"
-            echo "- OPL fork base: c533f939195847df1cd4d905f089aeb07300c72e"
-            echo "- OPL official upstream: b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
-            echo
-            if [ "${{ job.status }}" = "success" ]; then
-              echo "- Build: passed"
-              echo "- Artifact: [download from this workflow run](${{ steps.upload.outputs.artifact-url }})"
-            else
-              echo "- Build: failed; inspect the preceding step logs."
+            echo "- Trigger: \`$GITHUB_EVENT_NAME\`"
+            echo "- Integrated branch: \`refresh/luna-official-latest-2026-11-18\`"
+            if [ -f source-revisions.txt ]; then
+              echo
+              echo "### Source revisions"
+              cat source-revisions.txt
             fi
-            echo "- PT-BR and OPL are fresh-install defaults; existing saved preferences are retained."
-            echo "- No GitHub Release was created. Physical PS2 testing remains necessary."
+            if [ "\${{ job.status }}" = "success" ]; then
+              echo
+              echo "- Build and package: passed"
+              echo "- Release: \${{ steps.release.outputs.url }}"
+              echo "- Physical PS2 testing: still required"
+            else
+              echo
+              echo "- Build or publication: failed; no successful Release should be assumed."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

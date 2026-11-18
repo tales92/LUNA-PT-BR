@@ -1,38 +1,44 @@
 # LUNA PT-BR — sincronização e integração upstream
 
-## Base desta reconstrução
+## Fontes acompanhadas
 
-| Projeto | Revisão |
-| --- | --- |
-| LUNA principal, `dnunezx/LUNA` | `4ee0b462e9486d5c384ec6db2f990c526a7ad3fe` |
-| Frontend, branch `luna` de `dnunezx/nhddl-luna` | `df302ea8d961df17594d8c581958406ced203be7` |
-| Neutrino específico do LUNA | `669acaa3838770481e4f9b5a708c133c3a4e7278` |
-| OPL específico do LUNA | `c533f939195847df1cd4d905f089aeb07300c72e` |
-| PSXCore | `5d4de02f57933f70c48335d938c1d4c8b69634ad` |
+A automação acompanha as branches oficiais abaixo:
 
-O frontend foi avançado até o último commit disponível na branch `luna` do repositório `dnunezx/nhddl-luna`, que é dois commits à frente do pin ainda declarado pelo repositório principal oficial.
-
-## Runtimes oficiais
-
-A integração parte dos forks mantidos pelo autor do LUNA e mescla os commits mais recentes das branches oficiais, sem sobrescrever as adaptações específicas do launcher.
-
-| Runtime | Upstream oficial | Commit oficial verificado |
+| Projeto | Repositório | Branch acompanhada |
 | --- | --- | --- |
-| Neutrino | https://github.com/ps2max32/neutrino | `1310a9af7c7395381042f49dd77c4e002515d0f7` |
-| Open PS2 Loader | https://github.com/ps2homebrew/Open-PS2-Loader | `b3a2199795fe89ba7e2dd7b843354472dff2c3eb` |
+| LUNA principal | https://github.com/dnunezx/LUNA | \`main\` |
+| Frontend LUNA/NHDDL | https://github.com/dnunezx/nhddl-luna | \`luna\` |
+| Neutrino | https://github.com/ps2max32/neutrino | \`master\` |
+| Open PS2 Loader | https://github.com/ps2homebrew/Open-PS2-Loader | \`master\` |
 
-Na verificação de 18/11/2026, esses commits já eram os HEADs de `master` nos respectivos repositórios oficiais. Não havia commits oficiais posteriores para incorporar.
+O workflow verifica os quatro HEADs todos os dias às **06:00 UTC (03:00 em Brasília)**. Também pode ser executado manualmente. Em uma execução agendada, uma nova build só é iniciada quando ao menos um desses quatro commits difere dos registrados na última Release.
 
-Os pins são armazenados em `tools/upstream-runtime-pins.json`. A CI valida os hashes e interrompe a compilação se o upstream avançar, exigindo revisão explícita.
+## Como a atualização é aplicada
 
-## Personalizações do fork
+1. O commit mais recente de \`dnunezx/LUNA:main\` é integrado à branch de manutenção deste projeto.
+2. O pin do frontend é atualizado para o HEAD atual de \`dnunezx/nhddl-luna:luna\`.
+3. Os hashes atuais de Neutrino e OPL são gravados em \`tools/upstream-runtime-pins.json\`.
+4. Os commits oficiais de Neutrino e OPL são mesclados sobre os respectivos forks que contêm as adaptações necessárias ao LUNA.
+5. As validações verificam os pontos de integração LUNA/MMCE/VMC/IGR e os backends SMB/NFS. Conflitos ou alterações incompatíveis interrompem a build e impedem a publicação.
+
+As dependências são obtidas por hashes completos, não por downloads flutuantes durante a compilação. O arquivo \`source-revisions.txt\` registra os commits utilizados em cada pacote.
+
+O PSXCore permanece sujeito à revisão declarada em \`tools/dependencies.json\`; ele não é um dos quatro repositórios consultados pelo radar diário desta automação.
+
+## Publicação automática
+
+Uma Release é criada somente depois que a compilação, o empacotamento e as verificações SHA-256 terminam com sucesso. O pacote FMCB, o arquivo de checksums e \`source-revisions.txt\` são anexados à Release. As versões automáticas são marcadas como **pré-lançamento**, pois os testes automatizados não substituem a validação em um PlayStation 2 físico.
+
+Um push na branch \`refresh/luna-official-latest-2026-11-18\` também dispara uma build. O acionamento manual oferece a opção de forçar uma nova publicação mesmo sem commits upstream novos. Uma execução agendada sem alterações apenas informa que está atualizada e não cria uma Release repetida.
+
+## Personalizações preservadas
 
 - **Idioma:** Português (Brasil) como padrão de instalação nova. Preferências já salvas continuam tendo prioridade.
 - **Core PS2:** OPL como padrão em uma instalação nova. Preferências globais e por jogo salvas continuam tendo prioridade.
-- **ZSO:** descoberta de imagens `.zso`, leitura dos metadados ISO comprimidos e encaminhamento obrigatório da execução para OPL.
-- **Matrix Infinity:** inclui `BOOT/BOOT2.ELF` como encaminhador R2 para `mc0:/APP_LUNA/luna.elf`.
+- **ZSO:** descoberta de imagens \`.zso\`, leitura dos metadados ISO comprimidos e encaminhamento obrigatório da execução para OPL.
+- **Matrix Infinity:** inclui \`BOOT/BOOT2.ELF\` como encaminhador R2 para \`mc0:/APP_LUNA/luna.elf\`.
 - **Neutrino:** preserva as adaptações de UDPFS, MMCE e retorno IGR; incorpora os backends SMB2 e NFSv4.0 do upstream.
-- **OPL:** preserva IOPRP privado `opli:`, ABI VMC do LUNA, restauração seletiva de cartões MMCE e delegação do botão físico de energia ao IOP quando `COMPAT_LUNA_IOP_POFF` está ativo.
+- **OPL:** preserva IOPRP privado \`opli:\`, ABI VMC do LUNA, restauração seletiva de cartões MMCE e delegação do botão físico de energia ao IOP quando \`COMPAT_LUNA_IOP_POFF\` está ativo.
 
 ## Limites e validação
 
@@ -41,5 +47,3 @@ SMB/NFS são compilados e incluídos nos runtimes, mas esta integração ainda n
 O LUNA utiliza o core de jogos do OPL; não carrega a interface gráfica independente do OPL.
 
 A CI verifica compilação, presença dos módulos, geração dos ELFs e integridade dos arquivos do pacote FMCB. Isso **não substitui testes em um PlayStation 2 físico**. O encaminhador Matrix R2, ZSO, MMCE, VMC, retorno IGR e compatibilidade de jogos precisam ser testados no console antes de uma instalação considerada estável.
-
-Nenhuma publicação em Releases é criada automaticamente nesta etapa. Primeiro será gerado e inspecionado um artefato de CI.
