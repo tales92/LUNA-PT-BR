@@ -29,11 +29,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      should_build: ${ steps.decision.outputs.should_build }}
-      luna_sha: ${ steps.heads.outputs.luna_sha }}
-      nhddl_sha: ${ steps.heads.outputs.nhddl_sha }}
-      neutrino_sha: ${ steps.heads.outputs.neutrino_sha }}
-      opl_sha: ${ steps.heads.outputs.opl_sha }}
+      should_build: ${{ steps.decision.outputs.should_build }}
+      luna_sha: ${{ steps.heads.outputs.luna_sha }}
+      nhddl_sha: ${{ steps.heads.outputs.nhddl_sha }}
+      neutrino_sha: ${{ steps.heads.outputs.neutrino_sha }}
+      opl_sha: ${{ steps.heads.outputs.opl_sha }}
     steps:
       - name: Resolve the latest official commits
         id: heads
@@ -72,13 +72,13 @@ jobs:
         id: decision
         shell: bash
         env:
-          GH_TOKEN: ${ secrets.GITHUB_TOKEN }}
-          EVENT_NAME: ${ github.event_name }}
-          FORCE_PUBLISH: ${ inputs.force_publish }}
-          LUNA_SHA: ${ steps.heads.outputs.luna_sha }}
-          NHDDL_SHA: ${ steps.heads.outputs.nhddl_sha }}
-          NEUTRINO_SHA: ${ steps.heads.outputs.neutrino_sha }}
-          OPL_SHA: ${ steps.heads.outputs.opl_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE_PUBLISH: ${{ inputs.force_publish }}
+          LUNA_SHA: ${{ steps.heads.outputs.luna_sha }}
+          NHDDL_SHA: ${{ steps.heads.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${{ steps.heads.outputs.neutrino_sha }}
+          OPL_SHA: ${{ steps.heads.outputs.opl_sha }}
         run: |
           set -euo pipefail
           should_build=true
@@ -145,10 +145,10 @@ jobs:
         id: sync
         shell: bash
         env:
-          LUNA_SHA: ${ needs.prepare.outputs.luna_sha }}
-          NHDDL_SHA: ${ needs.prepare.outputs.nhddl_sha }}
-          NEUTRINO_SHA: ${ needs.prepare.outputs.neutrino_sha }}
-          OPL_SHA: ${ needs.prepare.outputs.opl_sha }}
+          LUNA_SHA: ${{ needs.prepare.outputs.luna_sha }}
+          NHDDL_SHA: ${{ needs.prepare.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${{ needs.prepare.outputs.neutrino_sha }}
+          OPL_SHA: ${{ needs.prepare.outputs.opl_sha }}
         run: |
           set -euo pipefail
           bash tools/sync-upstream.sh \
@@ -158,10 +158,10 @@ jobs:
       - name: Fetch the exact LUNA build dependencies
         shell: bash
         env:
-          LUNA_SHA: ${ needs.prepare.outputs.luna_sha }}
-          NHDDL_SHA: ${ needs.prepare.outputs.nhddl_sha }}
-          NEUTRINO_SHA: ${ needs.prepare.outputs.neutrino_sha }}
-          OPL_SHA: ${ needs.prepare.outputs.opl_sha }}
+          LUNA_SHA: ${{ needs.prepare.outputs.luna_sha }}
+          NHDDL_SHA: ${{ needs.prepare.outputs.nhddl_sha }}
+          NEUTRINO_SHA: ${{ needs.prepare.outputs.neutrino_sha }}
+          OPL_SHA: ${{ needs.prepare.outputs.opl_sha }}
         run: |
           set -euo pipefail
           python3 tools/fetch-dependencies.py
@@ -270,7 +270,7 @@ jobs:
         id: package
         shell: pwsh
         env:
-          BUILD_VERSION: ${ steps.version.outputs.version }}
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           $version = $env:BUILD_VERSION
@@ -288,9 +288,9 @@ jobs:
       - name: Upload validated build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: LUNA-PT-BR-${ steps.package.outputs.version }}
+          name: LUNA-PT-BR-${{ steps.package.outputs.version }}
           path: |
-            dist/LUNA-${ steps.package.outputs.version }}-FMCB-mc0.zip
+            dist/LUNA-${{ steps.package.outputs.version }}-FMCB-mc0.zip
             dist/SHA256SUMS.txt
             source-revisions.txt
           if-no-files-found: error
@@ -300,8 +300,8 @@ jobs:
         id: release
         shell: bash
         env:
-          GH_TOKEN: ${ secrets.GITHUB_TOKEN }}
-          VERSION: ${ steps.package.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.package.outputs.version }}
         run: |
           set -euo pipefail
           target="$(git rev-parse HEAD)"
