@@ -43,6 +43,8 @@ need_file opl/ee_core/src/padhook.c
 need_text opl/ee_core/src/padhook.c "IGR_Poll_Alarm"
 need_text opl/ee_core/src/padhook.c "COMPAT_LUNA_MMCE_MASK"
 need_text opl/ee_core/src/padhook.c "COMPAT_LUNA_IOP_POFF"
+need_text opl/ee_core/src/padhook.c "if (!(g_compat_mask & COMPAT_LUNA_IOP_POFF))"
+need_text opl/ee_core/src/padhook.c "LoadMemModule(0, mmceigr_irx, size_mmceigr_irx, sizeof(slots), slots);"
 need_file opl/modules/iopcore/cdvdman/device-bdm.c
 need_text opl/modules/iopcore/cdvdman/device-bdm.c "bounce"
 need_text opl/modules/iopcore/cdvdman/device-bdm.c "g_bd->flush"
