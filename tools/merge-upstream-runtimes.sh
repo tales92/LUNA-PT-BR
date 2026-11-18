@@ -110,7 +110,8 @@ merge_runtime \
   "opl" \
   "https://github.com/ps2homebrew/Open-PS2-Loader.git" \
   "master" \
-  "Open PS2 Loader"
+  "Open PS2 Loader" \\
+  "b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
 
 echo "Both upstream runtime merges completed without unresolved conflicts."
 echo "Neutrino:"
