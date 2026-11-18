@@ -3,6 +3,16 @@
 # This runs only in CI; the upstream repositories are never modified.
 set -Eeuo pipefail
 
+PIN_FILE="tools/upstream-runtime-pins.json"
+command -v jq >/dev/null 2>&1 || { echo "::error::jq is required to read $PIN_FILE"; exit 1; }
+jq -e . "$PIN_FILE" >/dev/null
+NEUTRINO_URL="$(jq -er '.neutrino.url' "$PIN_FILE")"
+NEUTRINO_REF="$(jq -er '.neutrino.ref' "$PIN_FILE")"
+NEUTRINO_SHA="$(jq -er '.neutrino.commit' "$PIN_FILE")"
+OPL_URL="$(jq -er '.opl.url' "$PIN_FILE")"
+OPL_REF="$(jq -er '.opl.ref' "$PIN_FILE")"
+OPL_SHA="$(jq -er '.opl.commit' "$PIN_FILE")"
+
 merge_runtime() {
   local path="$1"
   local upstream_url="$2"
@@ -55,10 +65,10 @@ merge_runtime() {
 
 merge_runtime \
   "neutrino" \
-  "https://github.com/ps2max32/neutrino.git" \
-  "master" \
+  "$NEUTRINO_URL" \
+  "$NEUTRINO_REF" \
   "Neutrino" \
-  "1310a9af7c7395381042f49dd77c4e002515d0f7" \
+  "$NEUTRINO_SHA" \
   "ours"
 
 # Preserve LUNA's UDPFS IP override and HostFS notes; add the upstream SMB/NFS
@@ -104,10 +114,10 @@ git -C neutrino submodule update --init --recursive
 # OPL is merged without a preferred side. Any conflicts stop CI for review.
 merge_runtime \
   "opl" \
-  "https://github.com/ps2homebrew/Open-PS2-Loader.git" \
-  "master" \
+  "$OPL_URL" \
+  "$OPL_REF" \
   "Open PS2 Loader" \
-  "b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
+  "$OPL_SHA"
 
 python3 tools/apply-luna-opl-igr-adapter.py
 
