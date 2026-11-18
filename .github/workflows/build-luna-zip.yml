@@ -57,7 +57,8 @@ jobs:
           set -euxo pipefail
           docker run --rm -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_IMAGE" sh -eu -c '
             git config --global --add safe.directory /workspace/neutrino
-            make -C /workspace/neutrino -j2 clean all release EESIO_DEBUG=0 IOPCORE_DEBUG=0
+            make -C /workspace/neutrino clean
+            make -C /workspace/neutrino -j2 all EESIO_DEBUG=0 IOPCORE_DEBUG=0
             make -C /workspace/neutrino copy copy_extra
             for module in smb_ioman.irx smb_fhi.irx nfs_ioman.irx nfs_fhi.irx; do
               test -s "/workspace/neutrino/ee/loader/modules/$module"
