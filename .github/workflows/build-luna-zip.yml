@@ -36,6 +36,7 @@ jobs:
         run: |
           set -euxo pipefail
           bash tools/merge-upstream-runtimes.sh
+          bash tools/validate-runtime-integration.sh
 
       - name: Validate and apply PT-BR, OPL-default, and ZSO customizations
         shell: bash
@@ -54,6 +55,9 @@ jobs:
             "$BUILD_IMAGE" sh -eu -c '
               git config --global --add safe.directory /workspace/neutrino
               make clean all release
+              for module in smb_ioman.irx smb_fhi.irx nfs_ioman.irx nfs_fhi.irx; do
+                test -s "ee/loader/modules/$module"
+              done
             '
 
       - name: Build OPL runtime modules
