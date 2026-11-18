@@ -14,6 +14,8 @@ merge_runtime() {
   echo "Local revision:"
   git -C "$path" log -1 --oneline
 
+  git -C "$path" config user.name "LUNA Runtime Integration CI"
+  git -C "$path" config user.email "luna-runtime-integration@users.noreply.github.com"
   git -C "$path" fetch --no-tags "$upstream_url" "$upstream_branch"
   local upstream_ref="FETCH_HEAD"
 
@@ -21,9 +23,15 @@ merge_runtime() {
     echo "$label is already at or ahead of upstream."
   else
     if ! git -C "$path" merge --no-edit --no-ff "$upstream_ref"; then
-      echo "::error::$label has merge conflicts. No automatic side preference was applied."
-      echo "Conflicted paths:"
-      git -C "$path" diff --name-only --diff-filter=U || true
+      local conflicts
+      conflicts="$(git -C "$path" diff --name-only --diff-filter=U || true)"
+      if [[ -n "$conflicts" ]]; then
+        echo "::error::$label has merge conflicts. No automatic side preference was applied."
+        echo "Conflicted paths:"
+        printf "%s\\n" "$conflicts"
+      else
+        echo "::error::Git could not create the $label merge commit; inspect the error above."
+      fi
       echo "Conflict summary:"
       git -C "$path" status --short || true
       git -C "$path" diff --cc || true
