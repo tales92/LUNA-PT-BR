@@ -8,6 +8,8 @@ Built upon [NHDDL](https://github.com/pcm720/nhddl), it offers a different visio
 
 ISOs launch through [Neutrino](https://github.com/rickgaiser/neutrino) or [OPL](https://github.com/ps2homebrew/Open-PS2-Loader). VCDs launch through [PSXCore](https://github.com/dnunezx/PSXCore).
 
+**LUNA PT-BR build:** Portuguese (Brazil) is the fresh-install language, OPL is the default PS2 game core, and `.ZSO` images are discovered and launched through OPL. Existing saved language and per-drive core preferences remain respected.
+
 <details>
 <summary><strong>0x01 // Library v̶ie̶w̸s</strong></summary>
 
@@ -46,11 +48,21 @@ Other storage sources are selectable through Start → Storage Devices. Artwork 
 
 These steps use a memory card in slot 1 (`mc0:`), a working FMCB setup, and a USB drive your PS2 can read.
 
-1. Download the package ending in `-FMCB-mc0.zip` from [LUNA Releases](https://github.com/dnunezx/LUNA/releases).
+1. Download the package ending in `-FMCB-mc0.zip` from [LUNA Releases](https://github.com/tales92/LUNA-PT-BR/releases).
 2. Extract it and copy the complete `APP_LUNA` folder to the USB drive's root.
 3. On the PS2, open uLaunchELF or wLaunchELF from FMCB. Copy `APP_LUNA` from `mass:/` to `mc0:/`.
 4. Open FMCB Configurator, add a menu item named LUNA, and set its path to `mc0:/APP_LUNA/luna.elf`. Save the FMCB configuration.
 5. Connect the prepared game drive and start LUNA from FMCB.
+
+### Optional: direct Matrix Infinity boot with R2
+
+This PT-BR package also contains `BOOT/BOOT2.ELF`, a small forwarder for a Matrix Infinity chip.
+
+1. Install the complete `APP_LUNA` folder at `mc0:/APP_LUNA/` as described above.
+2. Copy `BOOT/BOOT2.ELF` to `mc0:/BOOT/BOOT2.ELF`. Merge it into the existing `BOOT` folder; **do not replace `BOOT.ELF`**, which can remain your R1/uLaunchELF shortcut.
+3. Fully power off the PS2. Hold **R2** while turning it on.
+
+The forwarder starts `mc0:/APP_LUNA/luna.elf` without moving or duplicating the LUNA application folder. Keep the existing R1/uLaunchELF shortcut as a recovery path until R2 boot has been verified on your console.
 
 Keep the application folder intact:
 
@@ -66,7 +78,7 @@ mc0:/APP_LUNA/
 ### // Optional ambient music
 
 
-If your release includes `Ambient-Music-Add-On`, copy its `ambient.wav` file into `APP_LUNA`. It uses about 1.3 MB of additional card space. Enable Options → Global → Ambient sound, then press Start to save. LUNA also works without the music file.
+If your release includes `Ambient-Music-Add-On`, copy its `ambient.adp` file into `APP_LUNA`. It uses about 1.3 MB of additional card space. Enable Options → Global → Ambient sound, then press Start to save. LUNA also works without the music file.
 
 
 

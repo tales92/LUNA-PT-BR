@@ -1,0 +1,146 @@
+name: Build LUNA PT-BR + ZSO + OPL default FMCB package
+
+on:
+  push:
+    branches: [main, refresh/luna-official-latest-2026-11-18]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: luna-ptbr-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      BUILD_IMAGE: ps2max/dev@sha256:e390699d46818e7c736f414ae5b1789d3ef7d3d914ce646a8a7bd027bd7e4521
+    steps:
+      - name: Check out the selected LUNA revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch exact LUNA source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/fetch-dependencies.py
+          {
+            printf 'luna=%s\n' "$GITHUB_SHA"
+            for component in nhddl neutrino opl psxcore; do
+              printf '%s=%s\n' "$component" "$(git -C "$component" rev-parse HEAD)"
+            done
+          } | tee source-revisions.txt
+
+      - name: Integrate the latest official Neutrino and OPL commits
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bash tools/merge-upstream-runtimes.sh
+          bash tools/validate-runtime-integration.sh
+
+      - name: Apply PT-BR default, OPL default, and ZSO support
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile tools/apply-luna-pt-br-zso.py
+          python3 tools/apply-luna-pt-br-zso.py "$GITHUB_WORKSPACE/nhddl"
+
+      - name: Build Neutrino and its SMB/NFS runtime modules
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_IMAGE" sh -eu -c '
+            git config --global --add safe.directory /workspace/neutrino
+            make -C /workspace/neutrino -j2 clean all release EESIO_DEBUG=0 IOPCORE_DEBUG=0
+            make -C /workspace/neutrino copy copy_extra
+            for module in smb_ioman.irx smb_fhi.irx nfs_ioman.irx nfs_fhi.irx; do
+              test -s "/workspace/neutrino/ee/loader/modules/$module"
+            done
+          '
+
+      - name: Build OPL runtime payloads
+        shell: pwsh
+        run: ./tools/build-opl-core.ps1 -Image $env:BUILD_IMAGE
+
+      - name: Build the latest LUNA frontend with PSXCore
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" \
+            -e LUNA_BUILD_IMAGE="$BUILD_IMAGE" "$BUILD_IMAGE" sh -eu -c '
+              export LUNA_BUILD_DIR=/workspace/nhddl/build-work-artifact
+              export LUNA_EMULATOR_OPTION=OFF
+              export LUNA_PSXCORE_DEVELOPMENT=OFF
+              sh /workspace/tools/build-luna-psxcore.sh
+              test -s /workspace/nhddl/build-work-artifact/luna.elf
+              test -s /workspace/nhddl/build-work-artifact/psxcore-runtime-bootstrap.elf
+            '
+
+      - name: Build Matrix Infinity R2 forwarder
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/tools/matrix-luna-forwarder "$BUILD_IMAGE" sh -eu -c '
+              make all
+              test -s BOOT2.ELF
+            '
+          mkdir -p dist/BOOT
+          cp tools/matrix-luna-forwarder/BOOT2.ELF dist/BOOT/BOOT2.ELF
+          file dist/BOOT/BOOT2.ELF
+
+      - name: Package and verify the FMCB installation ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $buildId = (Get-Date).ToUniversalTime().ToString('yyyyMMdd') + '-' + $env:GITHUB_SHA.Substring(0,7)
+          Copy-Item -LiteralPath nhddl/build-work-artifact/luna.elf -Destination "dist/LUNA-local-test-$buildId.elf"
+          ./tools/package-fmcb.ps1 -LocalTest $buildId -PsxcoreBuildDirectory nhddl/build-work-artifact
+          Push-Location dist
+          try { sha256sum -c SHA256SUMS.txt } finally { Pop-Location }
+          if (-not (Test-Path -LiteralPath "dist/LUNA-local-test-$buildId-FMCB-mc0.zip")) {
+            throw 'The installable FMCB ZIP was not generated.'
+          }
+
+      - name: Upload the validated build artifact
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: LUNA-PT-BR-ZSO-OPL-${{ github.sha }}
+          path: |
+            dist/LUNA-local-test-*-FMCB-mc0.zip
+            dist/SHA256SUMS.txt
+            source-revisions.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## LUNA PT-BR + ZSO + OPL default"
+            echo
+            echo "- LUNA source: $GITHUB_SHA"
+            echo "- Frontend: df302ea8d961df17594d8c581958406ced203be7"
+            echo "- Neutrino fork base: 669acaa3838770481e4f9b5a708c133c3a4e7278"
+            echo "- Neutrino official upstream: 1310a9af7c7395381042f49dd77c4e002515d0f7"
+            echo "- OPL fork base: c533f939195847df1cd4d905f089aeb07300c72e"
+            echo "- OPL official upstream: b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
+            echo
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- Build: passed"
+              echo "- Artifact: [download from this workflow run](${{ steps.upload.outputs.artifact-url }})"
+            else
+              echo "- Build: failed; inspect the preceding step logs."
+            fi
+            echo "- PT-BR and OPL are fresh-install defaults; existing saved preferences are retained."
+            echo "- No GitHub Release was created. Physical PS2 testing remains necessary."
+          } >> "$GITHUB_STEP_SUMMARY"

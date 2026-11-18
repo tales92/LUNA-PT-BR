@@ -1,0 +1,12 @@
+{
+  "neutrino": {
+    "url": "https://github.com/ps2max32/neutrino.git",
+    "ref": "master",
+    "commit": "1310a9af7c7395381042f49dd77c4e002515d0f7"
+  },
+  "opl": {
+    "url": "https://github.com/ps2homebrew/Open-PS2-Loader.git",
+    "ref": "master",
+    "commit": "b3a2199795fe89ba7e2dd7b843354472dff2c3eb"
+  }
+}
