@@ -52,10 +52,10 @@ jobs:
           for name in ('neutrino', 'opl'):
               revision = subprocess.check_output(['git', '-C', name, 'rev-parse', 'HEAD'], text=True).strip()
               with Path('source-revisions.txt').open('a', encoding='utf-8') as output:
-                  output.write(f'{name}_integrated={revision}\n')
+                  output.write(f'{name}_integrated={revision}' + chr(10))
               if name == 'opl':
                   manifest[name]['revision'] = revision
-          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          manifest_path.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
           PY
 
       - name: Apply PT-BR default, OPL default, and ZSO support
