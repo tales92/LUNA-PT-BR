@@ -6,14 +6,29 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-luna-zip-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  delete_superseded_release:
+    if: contains(github.event.head_commit.message, '[delete-release]')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete the superseded pre-release and its tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/450380352"
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/luna-ptbr-2026.11.18-dd136f0"
+          echo "Removed release 450380352 and its tag."
+
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[delete-release]') && !contains(github.event.head_commit.message, '[no-build]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
