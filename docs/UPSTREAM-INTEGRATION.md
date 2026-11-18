@@ -18,8 +18,12 @@ Os hashes são registrados em `tools/upstream-runtime-pins.json` e verificados a
 ## Adaptações preservadas
 
 - Neutrino: mantém o override de IP do UDPFS do LUNA, o retorno IGR e os ajustes de MMCE; adiciona os backends SMB2 e NFSv4.0, respectivas configurações e módulos.
-- OPL: mantém o dispositivo IOPRP privado `opli:`, o ABI de VMC do LUNA, a restauração seletiva de cartões MMCE e o tratamento do botão de energia; incorpora as melhorias upstream de polling do IGR, suporte SIO2MAN e leitura BDM alinhada.
+- OPL: mantém o dispositivo IOPRP privado `opli:`, o ABI de VMC do LUNA, a restauração seletiva de cartões MMCE e a delegação do botão físico de energia ao Neutrino/IOP quando `COMPAT_LUNA_IOP_POFF` está ativo; incorpora as melhorias upstream de polling do IGR, suporte SIO2MAN e leitura BDM alinhada.
 - O workflow valida marcadores de integração antes de compilar e confere que os módulos SMB/NFS foram produzidos.
+
+## Estado do pré-lançamento
+
+A GitHub Actions concluiu a compilação de Neutrino, OPL, LUNA e do encaminhador Matrix R2, gerou o pacote FMCB e validou a integridade dos arquivos ZIP e do checksum. Esta publicação é um pré-lançamento de integração, não uma versão considerada estável após testes físicos.
 
 ## Limites conhecidos
 
