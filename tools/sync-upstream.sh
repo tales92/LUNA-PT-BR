@@ -28,7 +28,66 @@ git fetch --no-tags https://github.com/dnunezx/LUNA.git "$luna_sha"
 if git merge-base --is-ancestor "$luna_sha" HEAD; then
   echo "The selected LUNA upstream commit is already included."
 else
-  git merge --no-edit --no-ff "$luna_sha"
+  if ! git merge --no-edit --no-ff "$luna_sha"; then
+    mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+    if [[ "${#conflicts[@]}" -eq 1 && "${conflicts[0]}" == "tools/dependencies.json" ]]; then
+      echo "The only conflict is the NHDDL revision pin in tools/dependencies.json."
+      echo "Preserving fork dependency sources and validating that the official change only advances that pin."
+      python3 - "$nhddl_sha" <<'PY'
+import copy
+import json
+import subprocess
+import sys
+
+path = "tools/dependencies.json"
+expected_nhddl = sys.argv[1]
+
+def read_stage(stage):
+    raw = subprocess.check_output(["git", "show", f":{stage}:{path}"], text=True)
+    return json.loads(raw)
+
+ours = read_stage(2)
+theirs = read_stage(3)
+ours_compare = copy.deepcopy(ours)
+theirs_compare = copy.deepcopy(theirs)
+
+try:
+    ours_revision = ours_compare["nhddl"]["revision"]
+    theirs_revision = theirs_compare["nhddl"]["revision"]
+except (KeyError, TypeError) as error:
+    raise SystemExit(f"Cannot validate dependency manifest structure: {error}")
+
+ours_compare["nhddl"]["revision"] = "<NHDDL_REVISION>"
+theirs_compare["nhddl"]["revision"] = "<NHDDL_REVISION>"
+
+if ours_compare != theirs_compare:
+    raise SystemExit(
+        "The dependency manifest differs beyond the NHDDL revision pin. "
+        "Manual integration review is required."
+    )
+if theirs_revision != expected_nhddl:
+    raise SystemExit(
+        f"Official manifest NHDDL pin {theirs_revision} does not match "
+        f"the resolved upstream HEAD {expected_nhddl}."
+    )
+
+# Keep the fork's dependency URLs and structure; the caller below records the
+# newly resolved official NHDDL revision immediately after this merge.
+with open(path, "w", encoding="utf-8", newline="\\n") as output:
+    json.dump(ours, output, indent=2)
+    output.write("\\n")
+PY
+      git add tools/dependencies.json
+      git commit --no-edit
+    else
+      echo "::error::LUNA root merge has conflicts outside the narrowly reviewed NHDDL pin case."
+      printf 'Conflicting paths:\\n'
+      printf ' - %s\\n' "${conflicts[@]}"
+      git status --short
+      git merge --abort
+      exit 1
+    fi
+  fi
 fi
 echo "::endgroup::"
 
