@@ -84,10 +84,10 @@ jobs:
           should_build=true
 
           if [[ "$EVENT_NAME" == "schedule" && "$FORCE_PUBLISH" != "true" ]]; then
-            latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')"
+            latest_tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')"
             if [[ -n "$latest_tag" ]]; then
               mkdir -p .previous-release
-              if gh release download "$latest_tag" \
+              if gh release download "$latest_tag" --repo "$GITHUB_REPOSITORY" \
                   --pattern source-revisions.txt \
                   --dir .previous-release >/dev/null 2>&1; then
                 previous=".previous-release/source-revisions.txt"
