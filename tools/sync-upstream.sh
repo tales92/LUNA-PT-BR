@@ -73,9 +73,9 @@ if theirs_revision != expected_nhddl:
 
 # Keep the fork's dependency URLs and structure; the caller below records the
 # newly resolved official NHDDL revision immediately after this merge.
-with open(path, "w", encoding="utf-8", newline="\\n") as output:
+with open(path, "w", encoding="utf-8") as output:
     json.dump(ours, output, indent=2)
-    output.write("\\n")
+    output.write(chr(10))
 PY
       git add tools/dependencies.json
       git commit --no-edit
