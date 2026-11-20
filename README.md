@@ -6,7 +6,7 @@
 
 Built upon [NHDDL](https://github.com/pcm720/nhddl), it offers a different vision. Rooted in familiar foundations.
 
-ISOs launch through [Neutrino](https://github.com/rickgaiser/neutrino) or [OPL](https://github.com/ps2homebrew/Open-PS2-Loader). VCDs launch through [PSXCore](https://github.com/dnunezx/PSXCore).
+ISOs launch through custom integrations of [Neutrino](https://github.com/rickgaiser/neutrino) or [OPL](https://github.com/ps2homebrew/Open-PS2-Loader). VCDs launch through [PSXCore](https://github.com/dnunezx/PSXCore).
 
 **LUNA PT-BR build:** Portuguese (Brazil) is the fresh-install language, OPL is the default PS2 game core, and `.ZSO` images are discovered and launched through OPL. Existing saved language and per-drive core preferences remain respected.
 
